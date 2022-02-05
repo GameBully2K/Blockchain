@@ -878,7 +878,7 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
 pragma solidity ^0.8.0;
 
 contract Coda is ERC20, Ownable {
-    uint256 public _mintprice = 0.1 * (10**18);
+    uint256 public _mintprice =(10**17);
 
     uint256 public max_Supply = 100000000000 * (10**18);
     
@@ -887,14 +887,14 @@ contract Coda is ERC20, Ownable {
     using Strings for uint256;
     using SafeMath for uint256;
 
-    uint256 private payed = msg.value;
-    address private sender = msg.sender;
+    // uint256 private payed = msg.value;
+    // address private sender = msg.sender;
     bool public paused = false;
 
     constructor() ERC20("Coda", "CODA") {
     }
 
-    function _setPause(bool state)public virtual onlyOwner {
+    function _setPause(bool state)external virtual onlyOwner {
         paused = state;
     }
 
@@ -907,27 +907,26 @@ contract Coda is ERC20, Ownable {
         } 
     }
 
-    function mint(uint256 amount) public payable virtual {
-        require(payed >= amount * _mintprice, "Insufficient funds!");
-        require(amount <= maxMintAmountPerTx, "To much don't you think");
+    function mint(uint256 amount_) external payable virtual {
+        require(msg.value >= amount_ * _mintprice, "Insufficient funds!");
+        require(amount_ <= maxMintAmountPerTx, "To much don't you think");
         require(!paused, "The contract is paused!");
-        amount = amount * (10**18);
-        _mint(sender, amount);
+        amount_ = amount_ * (10**18);
+        _mint(msg.sender, amount_);
     }
     
-    function mintfor(address account, uint256 amount) public payable virtual{
-        require(payed >= amount * _mintprice, "Insufficient funds!");
-        require(amount <= maxMintAmountPerTx, "To much don't you think");
+    function mintfor(address account, uint256 amount_) external payable virtual{
         require(!paused, "The contract is paused!");
-        amount = amount * (10**18);
-        _mint(account, amount);
+        require(msg.value >= amount_ * _mintprice, "Insufficient funds!");
+        require(amount_ <= maxMintAmountPerTx, "To much don't you think");
+        
+        amount_ = amount_ * (10**18);
+        _mint(account, amount_);
     }
-    function _ownermint(address account, uint256 amount) public virtual onlyOwner {
-        amount = amount * (10**18);
-        _mint(account, amount);
+    function _ownermint(address account, uint256 amount_) external virtual onlyOwner {
+        amount_ = amount_ * (10**18);
+        _mint(account, amount_);
         }
-    
 
-    
 }
     
