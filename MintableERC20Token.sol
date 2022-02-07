@@ -532,7 +532,7 @@ pragma solidity ^0.8.0;
  * functions have been added to mitigate the well-known issues around setting
  * allowances. See {IERC20-approve}.
  */
-contract ERC20 is Context, IERC20, IERC20Metadata {
+contract ERC20 is Context, IERC20, Ownable, IERC20Metadata {
     mapping(address => uint256) private _balances;
 
     mapping(address => mapping(address => uint256)) private _allowances;
@@ -788,7 +788,17 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
      * - `account` cannot be the zero address.
      * - `account` must have at least `amount` tokens.
      */
+    
+    bool public noBurn= true;
+
+    //approval switch ( disabling approval will limit stacking and exchanging
+    function _setnoBurn(bool state)external virtual onlyOwner {
+            noBurn = state;
+        }
+
+
     function _burn(address account, uint256 amount) internal virtual {
+        require(!noBurn,"Coda :Burning Not Allowed yet! Thank you for supporting Coda!");
         require(account != address(0), "ERC20: burn from the zero address");
 
         _beforeTokenTransfer(account, address(0), amount);
@@ -818,11 +828,20 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
      * - `owner` cannot be the zero address.
      * - `spender` cannot be the zero address.
      */
+
+    bool public approvalpause= true;
+
+    //approval switch ( disabling approval will limit stacking and exchanging
+    function _setapprovalpause(bool state)external virtual onlyOwner {
+            approvalpause = state;
+        }
+
     function _approve(
         address owner,
         address spender,
         uint256 amount
     ) internal virtual {
+        require(!approvalpause,"Coda : Coin not yet tradable. Coda controls the launch. Thank you for backing our project");
         require(owner != address(0), "ERC20: approve from the zero address");
         require(spender != address(0), "ERC20: approve to the zero address");
 
@@ -877,7 +896,7 @@ contract ERC20 is Context, IERC20, IERC20Metadata {
 
 pragma solidity ^0.8.0;
 
-contract Coda is ERC20, Ownable {
+contract Coda is ERC20 {
     uint256 public _mintprice =(10**17);
 
     uint256 public max_Supply = 100000000000 * (10**18);
@@ -910,7 +929,7 @@ contract Coda is ERC20, Ownable {
     function mint(uint256 amount_) external payable virtual {
         require(msg.value >= amount_ * _mintprice, "Insufficient funds!");
         require(amount_ <= maxMintAmountPerTx, "To much don't you think");
-        require(!paused, "The contract is paused!");
+        require(!paused, "Coda : The contract is paused!");
         amount_ = amount_ * (10**18);
         _mint(msg.sender, amount_);
     }
@@ -927,6 +946,13 @@ contract Coda is ERC20, Ownable {
         amount_ = amount_ * (10**18);
         _mint(account, amount_);
         }
+    function withdraw() external payable onlyOwner{
+        (bool os, ) = payable(owner()).call{value: address(this).balance}("");
+    require(os);
+    }
+    function burn(address burner,uint256 amount) external{
+        _burn(burner,amount*(10**18));
+    }
 
 }
     
