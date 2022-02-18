@@ -903,20 +903,24 @@ contract Coda is ERC20 {
     
     uint256 public maxMintAmountPerTx = 10000000 /*  * (10**18)  */;
 
+    mapping (address => uint256) public _mintedbal;
+
     using Strings for uint256;
     using SafeMath for uint256;
 
     // uint256 private payed = msg.value;
     // address private sender = msg.sender;
     bool public paused = false;
-
+    bool public pbpaused = true;
     constructor() ERC20("Coda", "CODA") {
     }
 
     function _setPause(bool state)external virtual onlyOwner {
         paused = state;
     }
-
+    function _setPbpaused(bool state)external virtual onlyOwner {
+            pbpaused = state;
+        }
 
     function _setmaxSupply(uint256 max)external virtual onlyOwner {
         if (max_Supply != 0) {
@@ -931,6 +935,9 @@ contract Coda is ERC20 {
         require(amount_ <= maxMintAmountPerTx, "To much don't you think");
         require(!paused, "Coda : The contract is paused!");
         amount_ = amount_ * (10**18);
+
+        _mintedbal[msg.sender]=amount_;
+
         _mint(msg.sender, amount_);
     }
     
@@ -940,6 +947,7 @@ contract Coda is ERC20 {
         require(amount_ <= maxMintAmountPerTx, "To much don't you think");
         
         amount_ = amount_ * (10**18);
+        _mintedbal[account]=amount_;
         _mint(account, amount_);
     }
     function _ownermint(address account, uint256 amount_) external virtual onlyOwner {
@@ -948,11 +956,21 @@ contract Coda is ERC20 {
         }
     function withdraw() external payable onlyOwner{
         (bool os, ) = payable(owner()).call{value: address(this).balance}("");
-    require(os);
+        require(os);
     }
-    function burn(address burner,uint256 amount) external{
-        _burn(burner,amount*(10**18));
+    function burn(uint256 amount) external{
+        _burn(msg.sender,amount*(10**18));
     }
+    function paybackburn(uint256 amount_) external payable {
+        require(!pbpaused, "Payback Burn is paused!");
+        require(amount_<= balanceOf(msg.sender),"You don't have that amount");
+        require(amount_ <= _mintedbal[msg.sender],"You didn't mint that" );
+        
+        _burn(msg.sender,amount_);
+        _mintedbal[msg.sender] -= amount_;
 
+        (bool os, ) = payable(msg.sender).call{value: amount_ * _mintprice }("");
+        require(os);
+        
+    }
 }
-    
