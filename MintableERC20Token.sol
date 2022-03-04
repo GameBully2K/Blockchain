@@ -557,6 +557,14 @@ contract ERC20 is Context, IERC20, Ownable, IERC20Metadata {
         _symbol = symbol_;
     }
 
+    bool locked;
+    modifier noRentrancy() {
+        require (!locked,"No re-entrancy");
+        locked = true;
+        _;
+        locked = false;
+    }
+
     function setmaxSupply(uint256 maxSupply_) internal  virtual {
         maxSupply = maxSupply_;
     }
@@ -789,7 +797,7 @@ contract ERC20 is Context, IERC20, Ownable, IERC20Metadata {
      * - `account` must have at least `amount` tokens.
      */
     
-    bool public noBurn= true;
+    bool public noBurn= false;
 
     //approval switch ( disabling approval will limit stacking and exchanging
     function _setnoBurn(bool state)external virtual onlyOwner {
@@ -982,14 +990,14 @@ contract Coda is ERC20 {
         amount_ = amount_ * (10**18);
         _mint(account, amount_);
         }
-    function withdraw() external payable onlyOwner{
+    function withdraw() external payable onlyOwner noRentrancy{
         require(pbpaused, "Refunded Burn is active");
         uint256 amount_ = mintEarnings - devEarnings;
         mintEarnings = devEarnings;
         (bool os, ) = payable(owner()).call{value: amount_}("");
             require(os);
     }
-    function devWithdraw() external payable {
+    function devWithdraw() external payable noRentrancy {
         require(pbpaused, "Refunded Burn is active");
         require(msg.sender == dev, "not a dev");
         uint256 amount_ = devEarnings;
@@ -1001,18 +1009,17 @@ contract Coda is ERC20 {
     function burn(uint256 amount) external{
         _burn(msg.sender,amount*(10**18));
     }
-    function paybackburn(uint256 amount_) external payable {
+    function paybackburn(uint256 amount_) external payable noRentrancy {
         require(!pbpaused, "Payback Burn is paused!");
         require(amount_<= balanceOf(msg.sender),"You don't have that amount");
         require(amount_ <= _mintedbal[msg.sender],"You didn't mint that" );
         require(address(this).balance >= amount_ * _mintprice,"All Matic withdrawn");
         
-        _burn(msg.sender,amount_);
-        _mintedbal[msg.sender] -= (amount_  * (10**18));
-        
-
         (bool os, ) = payable(msg.sender).call{value: amount_ * _mintprice }("");
             require(os);
         
+        _burn(msg.sender,amount_);
+        _mintedbal[msg.sender] -= (amount_  * (10**18));
+    
     }
 }
